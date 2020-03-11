@@ -9,6 +9,9 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+#ifdef CS333_P2
+struct uproc;
+#endif //CS333P2
 
 // bio.c
 void            binit(void);
@@ -124,6 +127,22 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+#ifdef CS333_P2
+int             getprocs(uint, struct uproc*); 
+#endif //CS333_P2
+#ifdef CS333_P3
+void            controlF(void);
+void            printListStats(void); 
+void            controlR(void);
+void            controlS(void);
+void            controlZ(void);
+#endif //CS333_P3
+#ifdef CS333_P4
+int            setpriority(int pid, int priority);
+int            getpriority(int pid);
+void           promotion(void);
+void           controlRP4(void);
+#endif //CS333_P4
 
 // swtch.S
 void            swtch(struct context**, struct context*);

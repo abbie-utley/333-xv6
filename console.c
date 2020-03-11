@@ -24,7 +24,7 @@ static struct {
   int locking;
 } cons;
 
-static void
+  static void
 printint(int xx, int base, int sign)
 {
   static char digits[] = "0123456789abcdef";
@@ -51,7 +51,7 @@ printint(int xx, int base, int sign)
 //PAGEBREAK: 50
 
 // Print to the console. only understands %d, %x, %p, %s.
-void
+  void
 cprintf(char *fmt, ...)
 {
   int i, c, locking;
@@ -75,27 +75,27 @@ cprintf(char *fmt, ...)
     if(c == 0)
       break;
     switch(c){
-    case 'd':
-      printint(*argp++, 10, 1);
-      break;
-    case 'x':
-    case 'p':
-      printint(*argp++, 16, 0);
-      break;
-    case 's':
-      if((s = (char*)*argp++) == 0)
-        s = "(null)";
-      for(; *s; s++)
-        consputc(*s);
-      break;
-    case '%':
-      consputc('%');
-      break;
-    default:
-      // Print unknown % sequence to draw attention.
-      consputc('%');
-      consputc(c);
-      break;
+      case 'd':
+        printint(*argp++, 10, 1);
+        break;
+      case 'x':
+      case 'p':
+        printint(*argp++, 16, 0);
+        break;
+      case 's':
+        if((s = (char*)*argp++) == 0)
+          s = "(null)";
+        for(; *s; s++)
+          consputc(*s);
+        break;
+      case '%':
+        consputc('%');
+        break;
+      default:
+        // Print unknown % sequence to draw attention.
+        consputc('%');
+        consputc(c);
+        break;
     }
   }
 
@@ -103,7 +103,7 @@ cprintf(char *fmt, ...)
     release(&cons.lock);
 }
 
-void
+  void
 panic(char *s)
 {
   int i;
@@ -128,7 +128,7 @@ panic(char *s)
 #define CRTPORT 0x3d4
 static ushort *crt = (ushort*)P2V(0xb8000);  // CGA memory
 
-static void
+  static void
 cgaputc(int c)
 {
   int pos;
@@ -162,7 +162,7 @@ cgaputc(int c)
   crt[pos] = ' ' | 0x0700;
 }
 
-void
+  void
 consputc(int c)
 {
   if(panicked){
@@ -189,7 +189,7 @@ struct {
 #define C(x)  ((x)-'@')  // Control-x
 
 #ifdef PDX_XV6
-void
+  void
 do_shutdown()
 {
   cprintf("\nShutting down ...\n");
@@ -198,50 +198,77 @@ do_shutdown()
 }
 #endif // PDX_XV6
 
-void
+  void
 consoleintr(int (*getc)(void))
 {
   int c, doprocdump = 0;
 #ifdef PDX_XV6
   int shutdown = FALSE;
 #endif // PDX_XV6
+#ifdef CS333_P3
+  int doctrlf = 0; // flag for ctrl f 
+  int doprintListStats = 0; //flag for print test
+  int doctrlr = 0; //flag for ctrl r
+  int doctrls = 0; //flag for ctrl s
+  int doctrlz = 0; //flag for ctrl z
+#endif // CS333_P3
 
   acquire(&cons.lock);
   while((c = getc()) >= 0){
     switch(c){
-    case C('P'):  // Process listing.
-      // procdump() locks cons.lock indirectly; invoke later
-      doprocdump = 1;
-      break;
+      case C('P'):  // Process listing.
+        // procdump() locks cons.lock indirectly; invoke later
+        doprocdump = 1;
+        break;
 #ifdef PDX_XV6
-    case C('D'):
-      shutdown = TRUE;
-      break;
+      case C('D'):
+        shutdown = TRUE;
+        break;
 #endif // PDX_XV6
-    case C('U'):  // Kill line.
-      while(input.e != input.w &&
+      case C('U'):  // Kill line.
+        while(input.e != input.w &&
             input.buf[(input.e-1) % INPUT_BUF] != '\n'){
-        input.e--;
-        consputc(BACKSPACE);
-      }
-      break;
-    case C('H'): case '\x7f':  // Backspace
-      if(input.e != input.w){
-        input.e--;
-        consputc(BACKSPACE);
-      }
-      break;
-    default:
-      if(c != 0 && input.e-input.r < INPUT_BUF){
-        c = (c == '\r') ? '\n' : c;
-        input.buf[input.e++ % INPUT_BUF] = c;
-        consputc(c);
-        if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){
-          input.w = input.e;
-          wakeup(&input.r);
+          input.e--;
+          consputc(BACKSPACE);
         }
-      }
-      break;
+        break;
+      case C('H'): case '\x7f':  // Backspace
+        if(input.e != input.w){
+          input.e--;
+          consputc(BACKSPACE);
+        }
+        break;
+
+#ifdef CS333_P3 // implement ctrl - f process (prints unused size
+      case C('F'): //free list size
+        // call function indirectly
+        doctrlf = 1;
+        break;
+      case C('L'): //counts amount of processes on each list (supplied by Mark)
+        doprintListStats = 1;
+        break;
+      case C('R'): // runnable list
+        doctrlr = 1;
+        break;
+      case C('S'): // sleeping list
+        doctrls = 1;
+        break;
+      case C('Z'):
+        doctrlz = 1; // zombie list
+        break;
+#endif // CS33_P3 turned off
+
+      default:
+        if(c != 0 && input.e-input.r < INPUT_BUF){
+          c = (c == '\r') ? '\n' : c;
+          input.buf[input.e++ % INPUT_BUF] = c;
+          consputc(c);
+          if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){
+            input.w = input.e;
+            wakeup(&input.r);
+          }
+        }
+        break;
     }
   }
   release(&cons.lock);
@@ -252,9 +279,31 @@ consoleintr(int (*getc)(void))
   if(doprocdump) {
     procdump();  // now call procdump() wo. cons.lock held
   }
+
+#ifdef CS333_P3
+  if(doctrlf) {
+    controlF(); //call controlF()
+  }
+  if(doprintListStats) {
+    printListStats(); // call print function
+  }
+  if(doctrlr) {
+#ifdef CS333_P4
+    controlRP4();
+#else
+    controlR(); //call controlR()
+#endif //end of P4 or P3
+  }
+  if(doctrls) {
+    controlS(); //call controlS()
+  }
+  if(doctrlz) {
+    controlZ(); //call controlZ()
+  }
+#endif //CS333_P3
 }
 
-int
+  int
 consoleread(struct inode *ip, char *dst, int n)
 {
   uint target;
@@ -292,7 +341,7 @@ consoleread(struct inode *ip, char *dst, int n)
   return target - n;
 }
 
-int
+  int
 consolewrite(struct inode *ip, char *buf, int n)
 {
   int i;
@@ -307,7 +356,7 @@ consolewrite(struct inode *ip, char *buf, int n)
   return n;
 }
 
-void
+  void
 consoleinit(void)
 {
   initlock(&cons.lock, "console");

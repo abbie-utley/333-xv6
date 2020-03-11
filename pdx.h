@@ -24,4 +24,14 @@
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
+#ifdef CS333_P2
+#define DEF_UID 0
+#define DEF_GID 0
+#endif //CS333_P2
+#ifdef CS333_P4
+#define MAXPRIO 6
+#define DEFAULT_BUDGET 3000
+#define TICKS_TO_PROMOTE 6000
+#endif //CS333_P4
+
 #endif  // PDX_INCLUDE

@@ -25,8 +25,12 @@ main(int argc, char *argv[])
 
   rc = setpriority(pid, prio);
   if (rc != 0) {
-      printf(2, "Error: invalid pid\n");
+      printf(2, "Error: invalid pid or priority does not exist\n");
       printf(2, "Usage: %s [<pid> <prio>]\n",argv[0]);
+  }
+  else
+  {
+    printf(1, "Success!");
   }
   exit();
 }
