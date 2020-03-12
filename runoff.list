@@ -84,6 +84,8 @@ pdx-kernel.h
 halt.c
 date.h
 date.c
+uproc.h
+printListStats.c
 
 time.c
 ps.c
@@ -99,3 +101,9 @@ p2testsuite.c
 p2-test.c
 p3-test.c
 p4-test.c
+loopforever.c
+evans.c
+zombietest.c
+testgetprio.c
+testsetprio.c
+p4-priority.c
